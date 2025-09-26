@@ -26,7 +26,6 @@ export default function QueuePage() {
   const countdownRef = useRef<NodeJS.Timeout | null>(null)
   const isCountdownActiveRef = useRef(false)
 
-  // Generate or get user ID
   useEffect(() => {
     let userId = localStorage.getItem("queueUserId")
     if (!userId) {
@@ -35,63 +34,69 @@ export default function QueuePage() {
     }
 
     setQueueState((prev) => ({ ...prev, userId }))
+
+    // Join the queue via API
+    const joinQueue = async () => {
+      try {
+        const response = await fetch("/api/queue/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log("[v0] Joined queue:", data)
+        }
+      } catch (error) {
+        console.error("[v0] Failed to join queue:", error)
+      }
+    }
+
+    joinQueue()
   }, [])
 
-  // Queue management logic
   useEffect(() => {
     if (!queueState.userId) return
 
-    const manageQueue = () => {
-      // Get current active users from localStorage
-      const activeUsers = JSON.parse(localStorage.getItem("activeUsers") || "[]")
-      const currentTime = Date.now()
-
-      // Remove users who haven't been active in the last 10 seconds
-      const validUsers = activeUsers.filter((user: any) => currentTime - user.lastSeen < 10000)
-
-      // Add or update current user
-      const userIndex = validUsers.findIndex((user: any) => user.id === queueState.userId)
-      if (userIndex >= 0) {
-        validUsers[userIndex].lastSeen = currentTime
-      } else {
-        validUsers.push({
-          id: queueState.userId,
-          joinTime: currentTime,
-          lastSeen: currentTime,
+    const manageQueue = async () => {
+      try {
+        const response = await fetch("/api/queue/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: queueState.userId }),
         })
-      }
 
-      // Sort by join time to maintain queue order
-      validUsers.sort((a: any, b: any) => a.joinTime - b.joinTime)
+        if (response.ok) {
+          const data = await response.json()
 
-      // Save updated active users
-      localStorage.setItem("activeUsers", JSON.stringify(validUsers))
+          setQueueState((prev) => ({
+            ...prev,
+            position: data.position || 1,
+            totalUsers: data.totalInQueue || 1,
+            isWaiting: !data.canProceed,
+          }))
 
-      // Determine user's position and if they need to wait
-      const userPosition = validUsers.findIndex((user: any) => user.id === queueState.userId) + 1
-      const shouldWait = validUsers.length > 1 && userPosition > 1
-
-      setQueueState((prev) => ({
-        ...prev,
-        position: userPosition,
-        totalUsers: validUsers.length,
-        isWaiting: shouldWait,
-      }))
-
-      if (!shouldWait && validUsers.length >= 1 && !isCountdownActiveRef.current) {
-        startCountdown()
-      } else if (shouldWait && isCountdownActiveRef.current) {
-        if (countdownRef.current) {
-          clearInterval(countdownRef.current)
-          countdownRef.current = null
-          isCountdownActiveRef.current = false
+          // Start countdown if user can proceed and countdown isn't already active
+          if (data.canProceed && !isCountdownActiveRef.current) {
+            startCountdown()
+          } else if (!data.canProceed && isCountdownActiveRef.current) {
+            // Stop countdown if user needs to wait
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current)
+              countdownRef.current = null
+              isCountdownActiveRef.current = false
+            }
+            setQueueState((prev) => ({ ...prev, timeRemaining: 15 }))
+          }
         }
-        setQueueState((prev) => ({ ...prev, timeRemaining: 15 }))
+      } catch (error) {
+        console.error("[v0] Failed to get queue status:", error)
       }
     }
 
     const startCountdown = () => {
-      if (isCountdownActiveRef.current) return // Prevent multiple countdowns
+      if (isCountdownActiveRef.current) return
 
       isCountdownActiveRef.current = true
       let timeLeft = 15
@@ -109,12 +114,12 @@ export default function QueuePage() {
           }
           setIsRedirecting(true)
 
-          // Clean up user from active users before redirect
-          const activeUsers = JSON.parse(localStorage.getItem("activeUsers") || "[]")
-          const filteredUsers = activeUsers.filter((user: any) => user.id !== queueState.userId)
-          localStorage.setItem("activeUsers", JSON.stringify(filteredUsers))
+          fetch("/api/queue/leave", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: queueState.userId }),
+          }).catch(console.error)
 
-          // Redirect after a brief delay
           setTimeout(() => {
             window.location.href = "https://nexto-network.vercel.app"
           }, 1000)
@@ -125,8 +130,8 @@ export default function QueuePage() {
     // Initial queue check
     manageQueue()
 
-    // Set up interval to continuously manage queue
-    const interval = setInterval(manageQueue, 1000)
+    // Set up interval to continuously check queue status
+    const interval = setInterval(manageQueue, 2000) // Check every 2 seconds
 
     return () => {
       clearInterval(interval)
@@ -138,12 +143,12 @@ export default function QueuePage() {
     }
   }, [queueState.userId])
 
-  // Cleanup on page unload
   useEffect(() => {
     const handleBeforeUnload = () => {
-      const activeUsers = JSON.parse(localStorage.getItem("activeUsers") || "[]")
-      const filteredUsers = activeUsers.filter((user: any) => user.id !== queueState.userId)
-      localStorage.setItem("activeUsers", JSON.stringify(filteredUsers))
+      if (queueState.userId) {
+        // Use sendBeacon for reliable cleanup on page unload
+        navigator.sendBeacon("/api/queue/leave", JSON.stringify({ userId: queueState.userId }))
+      }
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload)
