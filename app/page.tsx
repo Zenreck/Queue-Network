@@ -77,10 +77,9 @@ export default function QueuePage() {
             isWaiting: !data.canProceed,
           }))
 
-          // Start countdown if user can proceed and countdown isn't already active
-          if (data.canProceed && !isCountdownActiveRef.current) {
+          if ((data.canProceed || data.shouldStartCountdown) && !isCountdownActiveRef.current) {
             startCountdown()
-          } else if (!data.canProceed && isCountdownActiveRef.current) {
+          } else if (!data.canProceed && isCountdownActiveRef.current && !data.shouldStartCountdown) {
             // Stop countdown if user needs to wait
             if (countdownRef.current) {
               clearInterval(countdownRef.current)
@@ -114,7 +113,7 @@ export default function QueuePage() {
           }
           setIsRedirecting(true)
 
-          fetch("/api/queue/leave", {
+          fetch("/api/queue/complete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: queueState.userId }),

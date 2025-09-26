@@ -41,12 +41,18 @@ export async function POST(request: Request) {
     // Check if user is first in queue
     const isFirst = queuePosition === 0
 
+    const shouldStartCountdown = await redis.get(`start_countdown:${userId}`)
+    if (shouldStartCountdown) {
+      await redis.del(`start_countdown:${userId}`)
+    }
+
     return Response.json({
       success: true,
       position: queuePosition !== null ? queuePosition + 1 : null,
       totalInQueue,
       isFirst,
       canProceed: isFirst,
+      shouldStartCountdown: !!shouldStartCountdown,
     })
   } catch (error) {
     console.error("Queue status error:", error)
