@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Users, Clock, ArrowRight } from "lucide-react"
@@ -23,6 +23,8 @@ export default function QueuePage() {
   })
 
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const countdownRef = useRef<NodeJS.Timeout | null>(null)
+  const isCountdownActiveRef = useRef(false)
 
   // Generate or get user ID
   useEffect(() => {
@@ -76,22 +78,35 @@ export default function QueuePage() {
         isWaiting: shouldWait,
       }))
 
-      // If user is first in line or alone, start countdown
-      if (!shouldWait && validUsers.length >= 1) {
+      if (!shouldWait && validUsers.length >= 1 && !isCountdownActiveRef.current) {
         startCountdown()
+      } else if (shouldWait && isCountdownActiveRef.current) {
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current)
+          countdownRef.current = null
+          isCountdownActiveRef.current = false
+        }
+        setQueueState((prev) => ({ ...prev, timeRemaining: 15 }))
       }
     }
 
     const startCountdown = () => {
+      if (isCountdownActiveRef.current) return // Prevent multiple countdowns
+
+      isCountdownActiveRef.current = true
       let timeLeft = 15
       setQueueState((prev) => ({ ...prev, timeRemaining: timeLeft }))
 
-      const countdown = setInterval(() => {
+      countdownRef.current = setInterval(() => {
         timeLeft -= 1
         setQueueState((prev) => ({ ...prev, timeRemaining: timeLeft }))
 
         if (timeLeft <= 0) {
-          clearInterval(countdown)
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current)
+            countdownRef.current = null
+            isCountdownActiveRef.current = false
+          }
           setIsRedirecting(true)
 
           // Clean up user from active users before redirect
@@ -115,6 +130,11 @@ export default function QueuePage() {
 
     return () => {
       clearInterval(interval)
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current)
+        countdownRef.current = null
+        isCountdownActiveRef.current = false
+      }
     }
   }, [queueState.userId])
 
