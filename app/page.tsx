@@ -179,19 +179,17 @@ export default function QueuePage() {
         <CardContent className="space-y-6">
           {queueState.isWaiting ? (
             <>
-              <div className="text-center space-y-2">
-                <div className="text-3xl font-bold text-primary">#{queueState.position}</div>
-                <p className="text-sm text-muted-foreground">Your position in queue</p>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Users ahead of you:</span>
-                  <span className="font-medium">{queueState.position - 1}</span>
+              <div className="flex items-center gap-6 p-4 bg-muted/50 rounded-lg">
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-primary">{queueState.position}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Your Position</p>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Total users:</span>
-                  <span className="font-medium">{queueState.totalUsers}</span>
+                <div className="flex-1 text-center">
+                  <div className="text-2xl font-semibold">of {queueState.totalUsers}</div>
+                  <p className="text-sm text-muted-foreground">people in queue</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {queueState.position === 1 ? "You're next!" : `${queueState.position - 1} ahead of you`}
+                  </p>
                 </div>
               </div>
 
@@ -204,6 +202,14 @@ export default function QueuePage() {
             </>
           ) : (
             <>
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg text-sm">
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {queueState.totalUsers} in queue
+                </span>
+                <span className="font-medium">Position #{queueState.position}</span>
+              </div>
+
               <div className="text-center space-y-4">
                 <div className="text-6xl font-bold text-primary">{queueState.timeRemaining}</div>
                 <p className="text-lg font-medium">
