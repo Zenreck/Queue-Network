@@ -19,7 +19,7 @@ export default function QueuePage() {
     position: 0,
     totalUsers: 0,
     isWaiting: false,
-    timeRemaining: 3,
+    timeRemaining: 15,
   })
 
   const [isRedirecting, setIsRedirecting] = useState(false)
@@ -83,7 +83,7 @@ export default function QueuePage() {
     }
 
     const startCountdown = () => {
-      let timeLeft = 3
+      let timeLeft = 15
       setQueueState((prev) => ({ ...prev, timeRemaining: timeLeft }))
 
       const countdown = setInterval(() => {
@@ -191,7 +191,7 @@ export default function QueuePage() {
                 </p>
               </div>
 
-              <Progress value={((3 - queueState.timeRemaining) / 3) * 100} className="w-full" />
+              <Progress value={((15 - queueState.timeRemaining) / 15) * 100} className="w-full" />
 
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <span>Taking you to Nexto Network</span>
