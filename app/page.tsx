@@ -120,7 +120,10 @@ export default function QueuePage() {
           }).catch(console.error)
 
           setTimeout(() => {
-            window.location.href = "https://nexto-network.vercel.app"
+            window.open("https://nexto-network.vercel.app", "_blank")
+            // Reset the queue state after opening new tab
+            setIsRedirecting(false)
+            setQueueState((prev) => ({ ...prev, timeRemaining: 30, isWaiting: true }))
           }, 1000)
         }
       }, 1000)
