@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Users, Clock, ArrowRight } from "lucide-react"
+import { Users, Clock, ArrowRight, CheckCircle } from "lucide-react"
 
 interface QueueState {
   userId: string
@@ -23,6 +23,7 @@ export default function QueuePage() {
   })
 
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [accessCode, setAccessCode] = useState<string | null>(null)
   const countdownRef = useRef<NodeJS.Timeout | null>(null)
   const isCountdownActiveRef = useRef(false)
 
@@ -35,7 +36,6 @@ export default function QueuePage() {
 
     setQueueState((prev) => ({ ...prev, userId }))
 
-    // Join the queue via API
     const joinQueue = async () => {
       try {
         const response = await fetch("/api/queue/join", {
@@ -80,7 +80,6 @@ export default function QueuePage() {
           if ((data.canProceed || data.shouldStartCountdown) && !isCountdownActiveRef.current) {
             startCountdown()
           } else if (!data.canProceed && isCountdownActiveRef.current && !data.shouldStartCountdown) {
-            // Stop countdown if user needs to wait
             if (countdownRef.current) {
               clearInterval(countdownRef.current)
               countdownRef.current = null
@@ -117,20 +116,23 @@ export default function QueuePage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: queueState.userId }),
-          }).catch(console.error)
-
-          setTimeout(() => {
-            window.location.href = "https://nexto-network.vercel.app/"
-          }, 1000)
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.accessCode) {
+                setAccessCode(data.accessCode)
+                setTimeout(() => {
+                  window.location.href = "https://nexto-network.vercel.app/"
+                }, 3000)
+              }
+            })
+            .catch(console.error)
         }
       }, 1000)
     }
 
-    // Initial queue check
     manageQueue()
-
-    // Set up interval to continuously check queue status
-    const interval = setInterval(manageQueue, 2000) // Check every 2 seconds
+    const interval = setInterval(manageQueue, 2000)
 
     return () => {
       clearInterval(interval)
@@ -145,7 +147,6 @@ export default function QueuePage() {
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (queueState.userId) {
-        // Use sendBeacon for reliable cleanup on page unload
         navigator.sendBeacon("/api/queue/leave", JSON.stringify({ userId: queueState.userId }))
       }
     }
@@ -154,6 +155,34 @@ export default function QueuePage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [queueState.userId])
 
+  if (isRedirecting && accessCode) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-6">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Access Granted!</h2>
+                <p className="text-muted-foreground">Your unique access code:</p>
+              </div>
+              <div className="bg-muted p-6 rounded-lg">
+                <div className="text-4xl font-mono font-bold tracking-wider text-primary">{accessCode}</div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">This code has been saved and will be valid for 1 hour</p>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <span>Redirecting to Nexto Network</span>
+                  <ArrowRight className="h-4 w-4 animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (isRedirecting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -161,8 +190,7 @@ export default function QueuePage() {
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <h2 className="text-xl font-semibold">Redirecting...</h2>
-              <p className="text-muted-foreground">Taking you to Nexto Network</p>
+              <h2 className="text-xl font-semibold">Generating your access code...</h2>
             </div>
           </CardContent>
         </Card>

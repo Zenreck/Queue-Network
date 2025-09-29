@@ -5,6 +5,15 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 })
 
+function generateAccessCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let code = ""
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
 export async function POST(request: Request) {
   try {
     const { userId } = await request.json()
@@ -12,6 +21,10 @@ export async function POST(request: Request) {
     if (!userId) {
       return Response.json({ error: "User ID is required" }, { status: 400 })
     }
+
+    const accessCode = generateAccessCode()
+    await redis.setex(`access_code:${accessCode}`, 3600, userId) // Code expires in 1 hour
+    await redis.setex(`user_code:${userId}`, 3600, accessCode)
 
     await redis.zrem("queue", userId)
     await redis.del(`user:${userId}`)
@@ -24,6 +37,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       success: true,
+      accessCode, // Return the access code
       nextUser: nextInQueue.length > 0 ? nextInQueue[0] : null,
     })
   } catch (error) {

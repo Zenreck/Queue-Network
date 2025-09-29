@@ -55,7 +55,18 @@ export async function POST(request: Request) {
       shouldStartCountdown: !!shouldStartCountdown,
     })
   } catch (error) {
-    console.error("Queue status error:", error)
-    return Response.json({ error: "Failed to get queue status" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error("Queue status error:", errorMessage)
+    if (errorStack) {
+      console.error("Stack trace:", errorStack)
+    }
+    return Response.json(
+      {
+        error: "Failed to get queue status",
+        details: errorMessage,
+      },
+      { status: 500 },
+    )
   }
 }
