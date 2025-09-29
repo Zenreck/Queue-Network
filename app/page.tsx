@@ -120,7 +120,7 @@ export default function QueuePage() {
           }).catch(console.error)
 
           setTimeout(() => {
-            window.location.href = "https://nexto-network.vercel.app"
+            window.location.href = "https://nexto-network.vercel.app/"
           }, 1000)
         }
       }, 1000)
