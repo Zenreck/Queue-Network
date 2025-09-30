@@ -123,7 +123,7 @@ export default function QueuePage() {
                 setAccessCode(data.accessCode)
                 setTimeout(() => {
                   window.location.href = "https://nexto-network.vercel.app/"
-                }, 3000)
+                }, 10000)
               }
             })
             .catch(console.error)
@@ -170,9 +170,11 @@ export default function QueuePage() {
                 <div className="text-4xl font-mono font-bold tracking-wider text-primary">{accessCode}</div>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">This code has been saved and will be valid for 1 hour</p>
+                <p className="text-sm text-muted-foreground">
+                  This code has been saved and will be valid for 2 minutes
+                </p>
                 <div className="flex items-center justify-center gap-2 text-sm">
-                  <span>Redirecting to Nexto Network</span>
+                  <span>Redirecting in 10 seconds...</span>
                   <ArrowRight className="h-4 w-4 animate-pulse" />
                 </div>
               </div>
