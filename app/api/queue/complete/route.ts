@@ -23,8 +23,20 @@ export async function POST(request: Request) {
     }
 
     const accessCode = generateAccessCode()
-    await redis.setex(`access_code:${accessCode}`, 120, userId)
-    await redis.setex(`user_code:${userId}`, 120, accessCode)
+    console.log("[v0] Generated access code:", accessCode, "for user:", userId)
+
+    // Save code to Redis with 2 minute expiration
+    const setResult1 = await redis.setex(`access_code:${accessCode}`, 120, userId)
+    console.log("[v0] Saved access_code to Redis:", setResult1)
+
+    const setResult2 = await redis.setex(`user_code:${userId}`, 120, accessCode)
+    console.log("[v0] Saved user_code to Redis:", setResult2)
+
+    // Verify the data was saved
+    const verifyCode = await redis.get(`access_code:${accessCode}`)
+    const verifyUser = await redis.get(`user_code:${userId}`)
+    console.log("[v0] Verification - access_code value:", verifyCode)
+    console.log("[v0] Verification - user_code value:", verifyUser)
 
     await redis.zrem("queue", userId)
     await redis.del(`user:${userId}`)
@@ -41,7 +53,7 @@ export async function POST(request: Request) {
       nextUser: nextInQueue.length > 0 ? nextInQueue[0] : null,
     })
   } catch (error) {
-    console.error("Queue complete error:", error)
+    console.error("[v0] Queue complete error:", error)
     return Response.json({ error: "Failed to complete queue" }, { status: 500 })
   }
 }
