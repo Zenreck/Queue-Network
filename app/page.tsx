@@ -122,7 +122,7 @@ export default function QueuePage() {
               if (data.accessCode) {
                 setAccessCode(data.accessCode)
                 setTimeout(() => {
-                  window.location.href = "https://nexto-network.vercel.app/"
+                  window.location.href = "https://lightex.vercel.app/"
                 }, 10000)
               }
             })
